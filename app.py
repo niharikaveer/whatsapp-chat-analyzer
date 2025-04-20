@@ -13,7 +13,8 @@ if uploaded_file is not None:
 
     # fetch unique users
     user_list = df['user'].unique().tolist()
-    user_list.remove('group_notification')
+    if 'group_notification' in user_list:
+        user_list.remove('group_notification')
     user_list.sort()
     user_list.insert(0,"Overall")
 
@@ -78,7 +79,14 @@ if uploaded_file is not None:
         st.title("Weekly Activity Map")
         user_heatmap = helper.activity_heatmap(selected_user,df)
         fig,ax = plt.subplots()
-        ax = sns.heatmap(user_heatmap)
+        fig, ax = plt.subplots()
+
+        if not user_heatmap.empty:
+            ax = sns.heatmap(user_heatmap)
+            st.pyplot(fig)
+        else:
+            st.warning("No heatmap data available.")
+
         st.pyplot(fig)
 
         # finding the busiest users in the group(Group level)
@@ -98,10 +106,12 @@ if uploaded_file is not None:
 
         # WordCloud
         st.title("Wordcloud")
-        df_wc = helper.create_wordcloud(selected_user,df)
-        fig,ax = plt.subplots()
-        ax.imshow(df_wc)
+        df_wc = helper.create_wordcloud(selected_user, df)  # This gives the WordCloud object
+        fig, ax = plt.subplots()
+        ax.imshow(df_wc.to_array())  # Convert the WordCloud object into an image array
+        ax.axis('off')  # Hide the axis for a cleaner view of the word cloud
         st.pyplot(fig)
+
 
         # most common words
         most_common_df = helper.most_common_words(selected_user,df)
@@ -114,19 +124,7 @@ if uploaded_file is not None:
         st.title('Most commmon words')
         st.pyplot(fig)
 
-        # emoji analysis
-        emoji_df = helper.emoji_helper(selected_user,df)
-        st.title("Emoji Analysis")
-
-        col1,col2 = st.columns(2)
-
-        with col1:
-            st.dataframe(emoji_df)
-        with col2:
-            fig,ax = plt.subplots()
-            ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f")
-            st.pyplot(fig)
-
+        
 
 
 

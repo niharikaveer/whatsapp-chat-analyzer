@@ -2,22 +2,32 @@ import re
 import pandas as pd
 
 def preprocess(data):
-    pattern = '\d{1,2}/\d{1,2}/\d{2,4},\s\d{1,2}:\d{2}\s-\s'
+    # Step 1: Replace narrow space (U+202F) with regular space
+    data = data.replace('\u202f', ' ')
+
+    # Step 2: Adjust regex pattern to match your format: MM/DD/YY, H:MM AM/PM -
+    pattern = r'\d{1,2}/\d{1,2}/\d{2,4}, \d{1,2}:\d{2} [AP]M - '
 
     messages = re.split(pattern, data)[1:]
     dates = re.findall(pattern, data)
 
+    # Step 3: Clean dates (remove ' - ' from end)
+    dates = [date.strip(' - ') for date in dates]
+
+    # Step 4: Create DataFrame
     df = pd.DataFrame({'user_message': messages, 'message_date': dates})
-    # convert message_date type
-    df['message_date'] = pd.to_datetime(df['message_date'], format='%d/%m/%Y, %H:%M - ')
+
+    # Step 5: Parse datetime using correct format
+    df['message_date'] = pd.to_datetime(df['message_date'], format='%m/%d/%y, %I:%M %p')
 
     df.rename(columns={'message_date': 'date'}, inplace=True)
 
     users = []
     messages = []
+
     for message in df['user_message']:
         entry = re.split('([\w\W]+?):\s', message)
-        if entry[1:]:  # user name
+        if entry[1:]:
             users.append(entry[1])
             messages.append(" ".join(entry[2:]))
         else:
@@ -28,6 +38,7 @@ def preprocess(data):
     df['message'] = messages
     df.drop(columns=['user_message'], inplace=True)
 
+    # Add extra features
     df['only_date'] = df['date'].dt.date
     df['year'] = df['date'].dt.year
     df['month_num'] = df['date'].dt.month
@@ -38,11 +49,11 @@ def preprocess(data):
     df['minute'] = df['date'].dt.minute
 
     period = []
-    for hour in df[['day_name', 'hour']]['hour']:
+    for hour in df['hour']:
         if hour == 23:
-            period.append(str(hour) + "-" + str('00'))
+            period.append(str(hour) + "-00")
         elif hour == 0:
-            period.append(str('00') + "-" + str(hour + 1))
+            period.append("00-1")
         else:
             period.append(str(hour) + "-" + str(hour + 1))
 
